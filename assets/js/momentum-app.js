@@ -572,15 +572,12 @@ function MomentumApp() {
                     <div className=${'ms-option' + (locks.skip ? ' ms-option-locked' : '')}>
                         <div className="ms-option-header">
                             <div>
-                                <h4>Reversal Effect: пропустить N последних месяцев</h4>
-                                <p>Исключает последние N месяцев из расчета momentum. 0 = выключено.</p>
+                                <h4>Фильтр последнего месяца (Reversal Effect)</h4>
+                                <p>Исключаем последний месяц из расчета momentum</p>
                             </div>
-                        </div>
-                        <div className="ms-option-body" style=${{display: 'block'}}>
-                            <label>Пропустить: <span>${s.skipWeeks === 0 ? 'Выкл' : s.skipWeeks + ' мес'}</span></label>
-                            <input type="range" min=${0} max=${2} step=${1} value=${s.skipWeeks}
-                                onInput=${locks.skip ? undefined : function(e) { upd('skipWeeks', parseInt(e.target.value)); }}
-                                disabled=${locks.skip || undefined} />
+                            <${Toggle} value=${s.skipWeeks > 0}
+                                onChange=${function(v) { upd('skipWeeks', v ? 1 : 0); }}
+                                locked=${locks.skip} />
                         </div>
                     </div>
 
