@@ -167,7 +167,7 @@ function buildPortfolio(idx, matrix, settings) {
     const startIdx = lookbackPeriod + skipWeeks;
 
     if (startIdx >= n - holdPer) {
-        return { error: 'Недостаточно данных для расчёта. Попробуйте уменьшить период расчёта momentum.' };
+        return { error: 'Недостаточно данных для расчёта. Попробуйте уменьшить период расчёта momentum (в месяцах).' };
     }
 
     const portfolioValues = [];
@@ -261,7 +261,7 @@ function buildPortfolio(idx, matrix, settings) {
     const annualReturn = totalYears > 0 ? (Math.pow(cash / 100000, 1 / totalYears) - 1) * 100 : 0;
 
     const periods        = portfolioValues.length;
-    const periodsPerYear = 52 / holdPer;
+    const periodsPerYear = 12 / holdPer;
     const avgReturn = portfolioValues.reduce((s, v) => s + v.return, 0) / periods;
     const volatility = Math.sqrt(
         portfolioValues.reduce((s, v) => s + Math.pow(v.return - avgReturn, 2), 0) / periods
@@ -317,12 +317,12 @@ function getTips(tipData, s) {
         tips.push('Высокая просадка (' + tipData.maxDrawdown.toFixed(2) + '%). Рассмотрите увеличение диверсификации или фильтр волатильности.');
     if (tipData.annualReturn > 15)
         tips.push('Годовая доходность ' + tipData.annualReturn.toFixed(2) + '% превышает исторический рост рынка!');
-    if (s.lookbackPeriod < 13)
-        tips.push('Короткий период расчета может привести к высокой волатильности. Попробуйте 13–26 недель.');
+    if (s.lookbackPeriod < 6)
+        tips.push('Короткий период расчета может привести к высокой волатильности. Попробуйте 6–12 месяцев.');
     if (s.topN > 20)
         tips.push('Большое количество акций может снизить эффект momentum. Оптимум — 10–15 акций.');
     if (s.useVolFilter)
-        tips.push('Фильтр волатильности активен — исключаются акции с волатильностью выше ' + s.maxVol + '%.');
+        tips.push('Фильтр волатильности активен — исключаются акции с месячной волатильностью выше ' + s.maxVol + '%.');
     if (s.useRiskAdj)
         tips.push('Риск-корректированный momentum учитывает волатильность при выборе акций.');
     if (s.useReturnFilter)
@@ -458,7 +458,7 @@ function MomentumApp() {
         lookbackPeriod:  defaults.lookback,
         holdingPeriod:   defaults.holding,
         topN:            defaults.topn,
-        skipWeeks:       4,
+        skipWeeks:       1,
         useDividends:    true,
         useVolFilter:    false,
         maxVol:          50,
@@ -507,7 +507,7 @@ function MomentumApp() {
     if (!idx) {
         var noData = window.__momentumData__;
         if (!noData || !noData.prices) {
-            return html`<div className="ms-error"><p>Excel файл не настроен или не содержит данных. Перейдите в Настройки → Momentum Week.</p></div>`;
+            return html`<div className="ms-error"><p>Excel файл не настроен или не содержит данных. Перейдите в Настройки → Momentum Month.</p></div>`;
         }
         return html`<div className="ms-error"><p>Ошибка инициализации данных. Подробности в консоли браузера.</p></div>`;
     }
@@ -524,22 +524,22 @@ function MomentumApp() {
             <div className="ms-header">
                 <p className="ms-subtitle">Российский рынок акций</p>
                 <div className="ms-stats">
-                    ${idx.n} недель • ${idx.m} тикеров (сейчас торгуется ${idx.activeTickers})
+                    ${idx.n} месяцев • ${idx.m} тикеров (сейчас торгуется ${idx.activeTickers})
                 </div>
             </div>
 
             <div className="ms-controls">
                 <${Slider} id="ms-lookback"
-                    label="Период расчета momentum (нед)"
-                    value=${s.lookbackPeriod} min=${1} max=${52}
-                    unit="нед"
+                    label="Период расчета momentum (мес)"
+                    value=${s.lookbackPeriod} min=${1} max=${24}
+                    unit="мес"
                     desc="За какой период считаем доходность для ранжирования акций"
                     onChange=${function(v) { upd('lookbackPeriod', v); }}
                     locked=${locks.lookback} />
                 <${Slider} id="ms-holding"
-                    label="Период удержания (нед)"
-                    value=${s.holdingPeriod} min=${1} max=${10}
-                    unit="нед"
+                    label="Период удержания (мес)"
+                    value=${s.holdingPeriod} min=${1} max=${6}
+                    unit="мес"
                     desc="Как долго держим позиции перед ребалансировкой"
                     onChange=${function(v) { upd('holdingPeriod', v); }}
                     locked=${locks.holding} />
@@ -572,13 +572,13 @@ function MomentumApp() {
                     <div className=${'ms-option' + (locks.skip ? ' ms-option-locked' : '')}>
                         <div className="ms-option-header">
                             <div>
-                                <h4>Reversal Effect: пропустить N последних недель</h4>
-                                <p>Исключает последние N недель из расчета momentum. 0 = выключено, 4 ≈ 1 месяц.</p>
+                                <h4>Reversal Effect: пропустить N последних месяцев</h4>
+                                <p>Исключает последние N месяцев из расчета momentum. 0 = выключено.</p>
                             </div>
                         </div>
                         <div className="ms-option-body" style=${{display: 'block'}}>
-                            <label>Пропустить: <span>${s.skipWeeks === 0 ? 'Выкл' : s.skipWeeks + ' нед'}</span></label>
-                            <input type="range" min=${0} max=${4} step=${1} value=${s.skipWeeks}
+                            <label>Пропустить: <span>${s.skipWeeks === 0 ? 'Выкл' : s.skipWeeks + ' мес'}</span></label>
+                            <input type="range" min=${0} max=${2} step=${1} value=${s.skipWeeks}
                                 onInput=${locks.skip ? undefined : function(e) { upd('skipWeeks', parseInt(e.target.value)); }}
                                 disabled=${locks.skip || undefined} />
                         </div>
