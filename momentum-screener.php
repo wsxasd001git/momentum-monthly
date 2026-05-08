@@ -1,14 +1,14 @@
 <?php
 /**
- * Plugin Name: Momentum Week для российских акций
+ * Plugin Name: Momentum Monthly для российских акций
  * Plugin URI: https://github.com/momentum-screener
- * Description: Недельный скринер моментума для российского рынка акций с бэктестингом и рекомендациями
- * Version: 1.4.0
+ * Description: Месячный скринер моментума для российского рынка акций с бэктестингом и рекомендациями
+ * Version: 1.0.0
  * Author: Momentum Screener Team
  * Author URI: https://github.com/momentum-screener
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: momentum-week
+ * Text Domain: momentum-month
  * Domain Path: /languages
  */
 
@@ -18,14 +18,14 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('MOMENTUM_WEEK_VERSION', '1.4.0');
-define('MOMENTUM_WEEK_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('MOMENTUM_WEEK_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('MOMENTUM_MONTH_VERSION', '1.0.0');
+define('MOMENTUM_MONTH_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('MOMENTUM_MONTH_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 /**
  * Main Plugin Class
  */
-class Momentum_Week {
+class Momentum_Month {
 
     private static $instance = null;
 
@@ -61,18 +61,18 @@ class Momentum_Week {
 
         // Frontend hooks
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_scripts'));
-        add_shortcode('momentum_week', array($this, 'render_shortcode'));
+        add_shortcode('momentum_monthly', array($this, 'render_shortcode'));
 
         // AJAX hooks
-        add_action('wp_ajax_momentum_week_get_file_url', array($this, 'ajax_get_file_url'));
-        add_action('wp_ajax_nopriv_momentum_week_get_file_url', array($this, 'ajax_get_file_url'));
+        add_action('wp_ajax_momentum_month_get_file_url', array($this, 'ajax_get_file_url'));
+        add_action('wp_ajax_nopriv_momentum_month_get_file_url', array($this, 'ajax_get_file_url'));
 
         // New: serve pre-parsed JSON data (no SheetJS in browser)
-        add_action('wp_ajax_momentum_week_get_data', array($this, 'ajax_get_data'));
-        add_action('wp_ajax_nopriv_momentum_week_get_data', array($this, 'ajax_get_data'));
+        add_action('wp_ajax_momentum_month_get_data', array($this, 'ajax_get_data'));
+        add_action('wp_ajax_nopriv_momentum_month_get_data', array($this, 'ajax_get_data'));
 
         // Clear parsed-data cache when admin saves a new Excel file
-        add_action('update_option_momentum_week_settings', array($this, 'clear_data_cache'));
+        add_action('update_option_momentum_month_settings', array($this, 'clear_data_cache'));
     }
 
     /**
@@ -110,10 +110,10 @@ class Momentum_Week {
      */
     public function add_admin_menu() {
         add_options_page(
-            __('Momentum Week', 'momentum-week'),
-            __('Momentum Week', 'momentum-week'),
+            __('Momentum Month', 'momentum-month'),
+            __('Momentum Month', 'momentum-month'),
             'manage_options',
-            'momentum-week',
+            'momentum-month',
             array($this, 'render_admin_page')
         );
     }
@@ -122,47 +122,47 @@ class Momentum_Week {
      * Register settings
      */
     public function register_settings() {
-        register_setting('momentum_week_options', 'momentum_week_settings', array(
+        register_setting('momentum_month_options', 'momentum_month_settings', array(
             'sanitize_callback' => array($this, 'sanitize_settings')
         ));
 
         add_settings_section(
-            'momentum_week_main',
-            __('Настройки источника данных', 'momentum-week'),
+            'momentum_month_main',
+            __('Настройки источника данных', 'momentum-month'),
             array($this, 'settings_section_callback'),
-            'momentum-week'
+            'momentum-month'
         );
 
         add_settings_field(
             'excel_file_id',
-            __('Excel файл с данными', 'momentum-week'),
+            __('Excel файл с данными', 'momentum-month'),
             array($this, 'excel_file_callback'),
-            'momentum-week',
-            'momentum_week_main'
+            'momentum-month',
+            'momentum_month_main'
         );
 
         add_settings_field(
             'default_lookback',
-            __('Период расчета по умолчанию (нед)', 'momentum-week'),
+            __('Период расчета по умолчанию (мес)', 'momentum-month'),
             array($this, 'default_lookback_callback'),
-            'momentum-week',
-            'momentum_week_main'
+            'momentum-month',
+            'momentum_month_main'
         );
 
         add_settings_field(
             'default_holding',
-            __('Период удержания по умолчанию (нед)', 'momentum-week'),
+            __('Период удержания по умолчанию (мес)', 'momentum-month'),
             array($this, 'default_holding_callback'),
-            'momentum-week',
-            'momentum_week_main'
+            'momentum-month',
+            'momentum_month_main'
         );
 
         add_settings_field(
             'default_topn',
-            __('Количество акций по умолчанию', 'momentum-week'),
+            __('Количество акций по умолчанию', 'momentum-month'),
             array($this, 'default_topn_callback'),
-            'momentum-week',
-            'momentum_week_main'
+            'momentum-month',
+            'momentum_month_main'
         );
     }
 
@@ -177,11 +177,11 @@ class Momentum_Week {
         }
 
         if (isset($input['default_lookback'])) {
-            $sanitized['default_lookback'] = min(52, max(1, absint($input['default_lookback'])));
+            $sanitized['default_lookback'] = min(24, max(1, absint($input['default_lookback'])));
         }
 
         if (isset($input['default_holding'])) {
-            $sanitized['default_holding'] = min(10, max(1, absint($input['default_holding'])));
+            $sanitized['default_holding'] = min(6, max(1, absint($input['default_holding'])));
         }
 
         if (isset($input['default_topn'])) {
@@ -195,30 +195,30 @@ class Momentum_Week {
      * Settings section callback
      */
     public function settings_section_callback() {
-        echo '<p>' . esc_html__('Загрузите Excel файл с ценами акций через медиа-библиотеку WordPress.', 'momentum-week') . '</p>';
+        echo '<p>' . esc_html__('Загрузите Excel файл с ценами акций через медиа-библиотеку WordPress.', 'momentum-month') . '</p>';
     }
 
     /**
      * Excel file field callback
      */
     public function excel_file_callback() {
-        $options = get_option('momentum_week_settings');
+        $options = get_option('momentum_month_settings');
         $file_id = isset($options['excel_file_id']) ? $options['excel_file_id'] : '';
         $file_url = $file_id ? wp_get_attachment_url($file_id) : '';
         $file_name = $file_id ? basename(get_attached_file($file_id)) : '';
 
         ?>
         <div class="ms-file-upload">
-            <input type="hidden" name="momentum_week_settings[excel_file_id]" id="excel_file_id" value="<?php echo esc_attr($file_id); ?>" />
+            <input type="hidden" name="momentum_month_settings[excel_file_id]" id="excel_file_id" value="<?php echo esc_attr($file_id); ?>" />
             <input type="text" id="excel_file_name" value="<?php echo esc_attr($file_name); ?>" class="regular-text" readonly />
             <button type="button" class="button ms-upload-btn" data-target="excel_file_id" data-name="excel_file_name">
-                <?php esc_html_e('Выбрать файл', 'momentum-week'); ?>
+                <?php esc_html_e('Выбрать файл', 'momentum-month'); ?>
             </button>
             <button type="button" class="button ms-remove-btn" data-target="excel_file_id" data-name="excel_file_name" <?php echo empty($file_id) ? 'style="display:none;"' : ''; ?>>
-                <?php esc_html_e('Удалить', 'momentum-week'); ?>
+                <?php esc_html_e('Удалить', 'momentum-month'); ?>
             </button>
         </div>
-        <p class="description"><?php esc_html_e('Файл должен содержать лист "цены". Опционально: лист "дивиденды" или "Дивид"', 'momentum-week'); ?></p>
+        <p class="description"><?php esc_html_e('Файл должен содержать лист "цены". Опционально: лист "дивиденды" или "Дивид"', 'momentum-month'); ?></p>
         <?php
     }
 
@@ -226,27 +226,27 @@ class Momentum_Week {
      * Default lookback field callback
      */
     public function default_lookback_callback() {
-        $options = get_option('momentum_week_settings');
-        $value = isset($options['default_lookback']) ? $options['default_lookback'] : 13;
-        echo '<input type="number" name="momentum_week_settings[default_lookback]" value="' . esc_attr($value) . '" min="1" max="52" class="small-text" />';
+        $options = get_option('momentum_month_settings');
+        $value = isset($options['default_lookback']) ? $options['default_lookback'] : 6;
+        echo '<input type="number" name="momentum_month_settings[default_lookback]" value="' . esc_attr($value) . '" min="1" max="24" class="small-text" />';
     }
 
     /**
      * Default holding field callback
      */
     public function default_holding_callback() {
-        $options = get_option('momentum_week_settings');
-        $value = isset($options['default_holding']) ? $options['default_holding'] : 4;
-        echo '<input type="number" name="momentum_week_settings[default_holding]" value="' . esc_attr($value) . '" min="1" max="10" class="small-text" />';
+        $options = get_option('momentum_month_settings');
+        $value = isset($options['default_holding']) ? $options['default_holding'] : 1;
+        echo '<input type="number" name="momentum_month_settings[default_holding]" value="' . esc_attr($value) . '" min="1" max="6" class="small-text" />';
     }
 
     /**
      * Default topN field callback
      */
     public function default_topn_callback() {
-        $options = get_option('momentum_week_settings');
+        $options = get_option('momentum_month_settings');
         $value = isset($options['default_topn']) ? $options['default_topn'] : 10;
-        echo '<input type="number" name="momentum_week_settings[default_topn]" value="' . esc_attr($value) . '" min="5" max="30" class="small-text" />';
+        echo '<input type="number" name="momentum_month_settings[default_topn]" value="' . esc_attr($value) . '" min="5" max="30" class="small-text" />';
     }
 
     /**
@@ -262,56 +262,56 @@ class Momentum_Week {
 
             <form action="options.php" method="post">
                 <?php
-                settings_fields('momentum_week_options');
-                do_settings_sections('momentum-week');
-                submit_button(__('Сохранить настройки', 'momentum-week'));
+                settings_fields('momentum_month_options');
+                do_settings_sections('momentum-month');
+                submit_button(__('Сохранить настройки', 'momentum-month'));
                 ?>
             </form>
 
             <hr>
 
-            <h2><?php esc_html_e('Использование', 'momentum-week'); ?></h2>
-            <p><?php esc_html_e('Используйте шорткод на любой странице:', 'momentum-week'); ?></p>
-            <code>[momentum_week]</code>
+            <h2><?php esc_html_e('Использование', 'momentum-month'); ?></h2>
+            <p><?php esc_html_e('Используйте шорткод на любой странице:', 'momentum-month'); ?></p>
+            <code>[momentum_monthly]</code>
 
-            <h3><?php esc_html_e('Параметры шорткода:', 'momentum-week'); ?></h3>
+            <h3><?php esc_html_e('Параметры шорткода:', 'momentum-month'); ?></h3>
             <ul>
-                <li><code>lookback="13"</code> - <?php esc_html_e('Период расчета momentum (1-52 нед)', 'momentum-week'); ?></li>
-                <li><code>holding="4"</code> - <?php esc_html_e('Период удержания (1-10 нед)', 'momentum-week'); ?></li>
-                <li><code>topn="10"</code> - <?php esc_html_e('Количество акций в портфеле (5-30)', 'momentum-week'); ?></li>
+                <li><code>lookback="6"</code> - <?php esc_html_e('Период расчета momentum (1-24 мес)', 'momentum-month'); ?></li>
+                <li><code>holding="1"</code> - <?php esc_html_e('Период удержания (1-6 мес)', 'momentum-month'); ?></li>
+                <li><code>topn="10"</code> - <?php esc_html_e('Количество акций в портфеле (5-30)', 'momentum-month'); ?></li>
             </ul>
 
-            <h3><?php esc_html_e('Блокировка фильтров:', 'momentum-week'); ?></h3>
-            <p><?php esc_html_e('Добавьте атрибуты lock_*="1", чтобы запретить пользователю изменять соответствующий параметр. Пример:', 'momentum-week'); ?></p>
-            <code>[momentum_week lookback="26" holding="4" topn="15" lock_lookback="1" lock_holding="1"]</code>
+            <h3><?php esc_html_e('Блокировка фильтров:', 'momentum-month'); ?></h3>
+            <p><?php esc_html_e('Добавьте атрибуты lock_*="1", чтобы запретить пользователю изменять соответствующий параметр. Пример:', 'momentum-month'); ?></p>
+            <code>[momentum_monthly lookback="12" holding="1" topn="15" lock_lookback="1" lock_holding="1"]</code>
             <table class="widefat striped" style="margin-top:12px; max-width:700px;">
                 <thead>
                     <tr>
-                        <th><?php esc_html_e('Атрибут', 'momentum-week'); ?></th>
-                        <th><?php esc_html_e('Что блокирует', 'momentum-week'); ?></th>
+                        <th><?php esc_html_e('Атрибут', 'momentum-month'); ?></th>
+                        <th><?php esc_html_e('Что блокирует', 'momentum-month'); ?></th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr><td><code>lock_lookback="1"</code></td><td><?php esc_html_e('Период расчёта momentum', 'momentum-week'); ?></td></tr>
-                    <tr><td><code>lock_holding="1"</code></td><td><?php esc_html_e('Период удержания', 'momentum-week'); ?></td></tr>
-                    <tr><td><code>lock_topn="1"</code></td><td><?php esc_html_e('Количество акций в портфеле', 'momentum-week'); ?></td></tr>
-                    <tr><td><code>lock_dividends="1"</code></td><td><?php esc_html_e('Тогл учёта дивидендов', 'momentum-week'); ?></td></tr>
-                    <tr><td><code>lock_skip="1"</code></td><td><?php esc_html_e('Слайдер Reversal Effect (пропуск N последних недель)', 'momentum-week'); ?></td></tr>
-                    <tr><td><code>lock_vol="1"</code></td><td><?php esc_html_e('Фильтр волатильности (тогл + слайдер)', 'momentum-week'); ?></td></tr>
-                    <tr><td><code>lock_riskadj="1"</code></td><td><?php esc_html_e('Риск-корректированный momentum', 'momentum-week'); ?></td></tr>
-                    <tr><td><code>lock_return="1"</code></td><td><?php esc_html_e('Фильтр границ доходности (тогл + слайдеры)', 'momentum-week'); ?></td></tr>
+                    <tr><td><code>lock_lookback="1"</code></td><td><?php esc_html_e('Период расчёта momentum', 'momentum-month'); ?></td></tr>
+                    <tr><td><code>lock_holding="1"</code></td><td><?php esc_html_e('Период удержания', 'momentum-month'); ?></td></tr>
+                    <tr><td><code>lock_topn="1"</code></td><td><?php esc_html_e('Количество акций в портфеле', 'momentum-month'); ?></td></tr>
+                    <tr><td><code>lock_dividends="1"</code></td><td><?php esc_html_e('Тогл учёта дивидендов', 'momentum-month'); ?></td></tr>
+                    <tr><td><code>lock_skip="1"</code></td><td><?php esc_html_e('Слайдер Reversal Effect (пропуск N последних месяцев)', 'momentum-month'); ?></td></tr>
+                    <tr><td><code>lock_vol="1"</code></td><td><?php esc_html_e('Фильтр волатильности (тогл + слайдер)', 'momentum-month'); ?></td></tr>
+                    <tr><td><code>lock_riskadj="1"</code></td><td><?php esc_html_e('Риск-корректированный momentum', 'momentum-month'); ?></td></tr>
+                    <tr><td><code>lock_return="1"</code></td><td><?php esc_html_e('Фильтр границ доходности (тогл + слайдеры)', 'momentum-month'); ?></td></tr>
                 </tbody>
             </table>
 
             <hr>
 
-            <h2><?php esc_html_e('Требования к Excel файлу', 'momentum-week'); ?></h2>
+            <h2><?php esc_html_e('Требования к Excel файлу', 'momentum-month'); ?></h2>
             <ul>
-                <li><?php esc_html_e('Формат: .xlsx', 'momentum-week'); ?></li>
-                <li><?php esc_html_e('Лист с названием "цены"', 'momentum-week'); ?></li>
-                <li><?php esc_html_e('Первый столбец: Time (даты)', 'momentum-week'); ?></li>
-                <li><?php esc_html_e('Остальные столбцы: тикеры акций с ценами', 'momentum-week'); ?></li>
-                <li><?php esc_html_e('Опционально: лист "дивиденды" или "Дивид" с дивидендами', 'momentum-week'); ?></li>
+                <li><?php esc_html_e('Формат: .xlsx', 'momentum-month'); ?></li>
+                <li><?php esc_html_e('Лист с названием "цены"', 'momentum-month'); ?></li>
+                <li><?php esc_html_e('Первый столбец: Time (даты)', 'momentum-month'); ?></li>
+                <li><?php esc_html_e('Остальные столбцы: тикеры акций с ценами', 'momentum-month'); ?></li>
+                <li><?php esc_html_e('Опционально: лист "дивиденды" или "Дивид" с дивидендами', 'momentum-month'); ?></li>
             </ul>
         </div>
         <?php
@@ -321,24 +321,24 @@ class Momentum_Week {
      * Enqueue admin scripts
      */
     public function enqueue_admin_scripts($hook) {
-        if ('settings_page_momentum-week' !== $hook) {
+        if ('settings_page_momentum-month' !== $hook) {
             return;
         }
 
         wp_enqueue_media();
 
         wp_enqueue_style(
-            'momentum-week-admin',
-            MOMENTUM_WEEK_PLUGIN_URL . 'assets/css/admin.css',
+            'momentum-month-admin',
+            MOMENTUM_MONTH_PLUGIN_URL . 'assets/css/admin.css',
             array(),
-            MOMENTUM_WEEK_VERSION
+            MOMENTUM_MONTH_VERSION
         );
 
         wp_enqueue_script(
-            'momentum-week-admin',
-            MOMENTUM_WEEK_PLUGIN_URL . 'assets/js/admin.js',
+            'momentum-month-admin',
+            MOMENTUM_MONTH_PLUGIN_URL . 'assets/js/admin.js',
             array('jquery'),
-            MOMENTUM_WEEK_VERSION,
+            MOMENTUM_MONTH_VERSION,
             true
         );
     }
@@ -348,83 +348,48 @@ class Momentum_Week {
      */
     public function enqueue_frontend_scripts() {
         global $post;
-
-        if (!is_a($post, 'WP_Post') || !has_shortcode($post->post_content, 'momentum_week')) {
+        if (!is_a($post, 'WP_Post') || !has_shortcode($post->post_content, 'momentum_monthly')) {
             return;
         }
 
-        // Chart.js
-        wp_enqueue_script(
-            'chartjs',
+        // React/htm/Chart.js — те же handles что у momentum-week,
+        // WordPress загрузит их один раз если оба плагина активны
+        wp_enqueue_script('chartjs',
             'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
-            array(),
-            '4.4.1',
-            true
-        );
-
-        // React 18 UMD + htm (separate handles to avoid conflicts with any theme React)
-        wp_enqueue_script(
-            'mw-react',
+            [], '4.4.1', true);
+        wp_enqueue_script('mw-react',
             'https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js',
-            array(),
-            '18',
-            true
-        );
-        wp_enqueue_script(
-            'mw-react-dom',
+            [], '18', true);
+        wp_enqueue_script('mw-react-dom',
             'https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js',
-            array('mw-react'),
-            '18',
-            true
-        );
-        wp_enqueue_script(
-            'mw-htm',
+            ['mw-react'], '18', true);
+        wp_enqueue_script('mw-htm',
             'https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js',
-            array(),
-            '3.1.1',
-            true
-        );
+            [], '3.1.1', true);
 
-        // Plugin styles
-        wp_enqueue_style(
-            'momentum-week',
-            MOMENTUM_WEEK_PLUGIN_URL . 'assets/css/momentum-screener.css',
-            array(),
-            MOMENTUM_WEEK_VERSION
-        );
+        wp_enqueue_style('momentum-month',
+            MOMENTUM_MONTH_PLUGIN_URL . 'assets/css/momentum-screener.css',
+            [], MOMENTUM_MONTH_VERSION);
 
-        // React app (replaces momentum-screener.js + momentum-worker.js)
-        wp_enqueue_script(
-            'momentum-week',
-            MOMENTUM_WEEK_PLUGIN_URL . 'assets/js/momentum-app.js',
-            array('mw-react', 'mw-react-dom', 'mw-htm', 'chartjs'),
-            MOMENTUM_WEEK_VERSION,
-            true
-        );
+        // Handle скрипта уникальный — momentum-month, не momentum-week
+        wp_enqueue_script('momentum-month',
+            MOMENTUM_MONTH_PLUGIN_URL . 'assets/js/momentum-app.js',
+            ['mw-react', 'mw-react-dom', 'mw-htm', 'chartjs'],
+            MOMENTUM_MONTH_VERSION, true);
 
-        // Parse Excel once (PHP, cached) and embed directly in the page as inline JS.
-        // React app reads window.__momentumData__ synchronously — no AJAX, no worker.
-        $options   = get_option('momentum_week_settings');
+        $options   = get_option('momentum_month_settings');
         $file_id   = isset($options['excel_file_id']) ? absint($options['excel_file_id']) : 0;
         $file_path = $file_id ? get_attached_file($file_id) : '';
-
         if ($file_path && file_exists($file_path)) {
-            $cache_key = 'mw_data_' . md5($file_path . filemtime($file_path));
-            $data      = get_transient($cache_key);
-
+            $cache_key = 'mm_data_' . md5($file_path . filemtime($file_path));
+            $data = get_transient($cache_key);
             if ($data === false) {
-                $data = momentum_week_parse_excel($file_path);
-                if (!is_wp_error($data)) {
-                    set_transient($cache_key, $data, WEEK_IN_SECONDS);
-                }
+                $data = momentum_month_parse_excel($file_path);
+                if (!is_wp_error($data)) set_transient($cache_key, $data, WEEK_IN_SECONDS);
             }
-
             if (!is_wp_error($data) && !empty($data['prices'])) {
-                wp_add_inline_script(
-                    'momentum-week',
-                    'window.__momentumData__=' . wp_json_encode($data) . ';',
-                    'before'
-                );
+                wp_add_inline_script('momentum-month',
+                    'window.__momentumData__=' . wp_json_encode($data) . ';', 'before');
             }
         }
     }
@@ -433,11 +398,11 @@ class Momentum_Week {
      * Render shortcode
      */
     public function render_shortcode($atts) {
-        $options = get_option('momentum_week_settings');
+        $options = get_option('momentum_month_settings');
 
         $atts = shortcode_atts(array(
-            'lookback' => isset($options['default_lookback']) ? $options['default_lookback'] : 13,
-            'holding' => isset($options['default_holding']) ? $options['default_holding'] : 4,
+            'lookback' => isset($options['default_lookback']) ? $options['default_lookback'] : 6,
+            'holding' => isset($options['default_holding']) ? $options['default_holding'] : 1,
             'topn' => isset($options['default_topn']) ? $options['default_topn'] : 10,
             'lock_lookback' => '0',
             'lock_holding' => '0',
@@ -450,7 +415,7 @@ class Momentum_Week {
         ), $atts);
 
         ob_start();
-        include MOMENTUM_WEEK_PLUGIN_DIR . 'includes/shortcode-template.php';
+        include MOMENTUM_MONTH_PLUGIN_DIR . 'includes/shortcode-template.php';
         return ob_get_clean();
     }
 
@@ -458,7 +423,7 @@ class Momentum_Week {
      * AJAX handler for getting file URL (legacy, kept for compatibility)
      */
     public function ajax_get_file_url() {
-        $options = get_option('momentum_week_settings');
+        $options = get_option('momentum_month_settings');
 
         $excel_url = '';
         if (!empty($options['excel_file_id'])) {
@@ -475,24 +440,24 @@ class Momentum_Week {
      * No SheetJS needed in the browser — PHP does the parsing once.
      */
     public function ajax_get_data() {
-        check_ajax_referer('momentum_week_data', 'nonce');
+        check_ajax_referer('momentum_month_data', 'nonce');
 
-        $options = get_option('momentum_week_settings');
+        $options = get_option('momentum_month_settings');
 
         if (empty($options['excel_file_id'])) {
-            wp_send_json_error(array('message' => __('Excel файл не настроен. Перейдите в Настройки > Momentum Week', 'momentum-week')));
+            wp_send_json_error(array('message' => __('Excel файл не настроен. Перейдите в Настройки > Momentum Month', 'momentum-month')));
             return;
         }
 
         $file_path = get_attached_file($options['excel_file_id']);
 
         if (!$file_path || !file_exists($file_path)) {
-            wp_send_json_error(array('message' => __('Excel файл не найден на сервере', 'momentum-week')));
+            wp_send_json_error(array('message' => __('Excel файл не найден на сервере', 'momentum-month')));
             return;
         }
 
         // Cache key changes automatically when the file is modified
-        $cache_key = 'mw_data_' . md5($file_path . filemtime($file_path));
+        $cache_key = 'mm_data_' . md5($file_path . filemtime($file_path));
         $cached    = get_transient($cache_key);
 
         if ($cached !== false) {
@@ -500,7 +465,7 @@ class Momentum_Week {
             return;
         }
 
-        $data = momentum_week_parse_excel($file_path);
+        $data = momentum_month_parse_excel($file_path);
 
         if (is_wp_error($data)) {
             wp_send_json_error(array('message' => $data->get_error_message()));
@@ -520,35 +485,35 @@ class Momentum_Week {
         global $wpdb;
         $wpdb->query(
             "DELETE FROM {$wpdb->options}
-             WHERE option_name LIKE '_transient_mw_data_%'
-                OR option_name LIKE '_transient_timeout_mw_data_%'"
+             WHERE option_name LIKE '_transient_mm_data_%'
+                OR option_name LIKE '_transient_timeout_mm_data_%'"
         );
     }
 }
 
 // Initialize plugin
-function momentum_week_init() {
-    return Momentum_Week::get_instance();
+function momentum_month_init() {
+    return Momentum_Month::get_instance();
 }
-add_action('plugins_loaded', 'momentum_week_init');
+add_action('plugins_loaded', 'momentum_month_init');
 
 // Activation hook
-register_activation_hook(__FILE__, 'momentum_week_activate');
-function momentum_week_activate() {
+register_activation_hook(__FILE__, 'momentum_month_activate');
+function momentum_month_activate() {
     // Set default options
     $defaults = array(
         'excel_file_id' => '',
-        'default_lookback' => 13,
-        'default_holding' => 4,
+        'default_lookback' => 6,
+        'default_holding' => 1,
         'default_topn' => 10,
     );
 
-    add_option('momentum_week_settings', $defaults);
+    add_option('momentum_month_settings', $defaults);
 }
 
 // Deactivation hook
-register_deactivation_hook(__FILE__, 'momentum_week_deactivate');
-function momentum_week_deactivate() {
+register_deactivation_hook(__FILE__, 'momentum_month_deactivate');
+function momentum_month_deactivate() {
     // Nothing to clean up
 }
 
@@ -568,7 +533,7 @@ function momentum_week_deactivate() {
  * The JavaScript side already knows how to convert Excel serial dates via
  * parseExcelDate(), so we intentionally leave dates as serial numbers.
  */
-function momentum_week_parse_excel($file_path) {
+function momentum_month_parse_excel($file_path) {
     if (!class_exists('ZipArchive')) {
         return new WP_Error('no_zip', 'PHP ZipArchive extension is not available');
     }
@@ -579,8 +544,8 @@ function momentum_week_parse_excel($file_path) {
     }
 
     try {
-        $shared = _mw_xlsx_shared_strings($zip);
-        $sheets = _mw_xlsx_sheet_map($zip);
+        $shared = _mm_xlsx_shared_strings($zip);
+        $sheets = _mm_xlsx_sheet_map($zip);
 
         // Find the price sheet
         $price_sheet = null;
@@ -593,7 +558,7 @@ function momentum_week_parse_excel($file_path) {
                 'Sheet "цены" not found. Available sheets: ' . implode(', ', array_keys($sheets)));
         }
 
-        $prices = _mw_xlsx_parse_sheet($zip, $price_sheet, $shared);
+        $prices = _mm_xlsx_parse_sheet($zip, $price_sheet, $shared);
         if (empty($prices)) {
             $zip->close();
             return new WP_Error('empty_sheet', 'Price sheet "цены" is empty');
@@ -603,7 +568,7 @@ function momentum_week_parse_excel($file_path) {
         $div_data = null;
         foreach (array('Дивид', 'дивиденды', 'Дивиденды', 'dividends', 'Dividends') as $name) {
             if (isset($sheets[$name])) {
-                $div_data = _mw_xlsx_parse_sheet($zip, $sheets[$name], $shared);
+                $div_data = _mm_xlsx_parse_sheet($zip, $sheets[$name], $shared);
                 break;
             }
         }
@@ -624,7 +589,7 @@ function momentum_week_parse_excel($file_path) {
 /**
  * Parse xl/sharedStrings.xml → indexed array of strings.
  */
-function _mw_xlsx_shared_strings($zip) {
+function _mm_xlsx_shared_strings($zip) {
     $strings = array();
     $xml_str = $zip->getFromName('xl/sharedStrings.xml');
     if (!$xml_str) return $strings;
@@ -649,7 +614,7 @@ function _mw_xlsx_shared_strings($zip) {
  * Parse xl/workbook.xml + xl/_rels/workbook.xml.rels
  * → associative array [ sheet_name => 'xl/worksheets/sheet1.xml', ... ]
  */
-function _mw_xlsx_sheet_map($zip) {
+function _mm_xlsx_sheet_map($zip) {
     $map = array();
 
     $wb_str = $zip->getFromName('xl/workbook.xml');
@@ -694,7 +659,7 @@ function _mw_xlsx_sheet_map($zip) {
  *
  * Numbers are returned as PHP floats; strings as PHP strings; missing cells as null.
  */
-function _mw_xlsx_parse_sheet($zip, $path, $shared_strings) {
+function _mm_xlsx_parse_sheet($zip, $path, $shared_strings) {
     $xml_str = $zip->getFromName($path);
     if (!$xml_str) return array();
 
@@ -713,7 +678,7 @@ function _mw_xlsx_parse_sheet($zip, $path, $shared_strings) {
             $type = $cell->getAttribute('t');       // "s", "str", "b", "inlineStr", ""
 
             // Resolve column index (0-based) from the cell reference
-            $col = _mw_xlsx_col_index($ref);
+            $col = _mm_xlsx_col_index($ref);
             if ($col > $max_col) $max_col = $col;
 
             // Cell value
@@ -776,7 +741,7 @@ function _mw_xlsx_parse_sheet($zip, $path, $shared_strings) {
  * Convert a cell reference like "A1", "AB42", "ZZ100" to a 0-based column index.
  * Row number is ignored.
  */
-function _mw_xlsx_col_index($ref) {
+function _mm_xlsx_col_index($ref) {
     // Strip digits from the end
     preg_match('/^([A-Za-z]+)/', $ref, $m);
     if (empty($m[1])) return 0;
