@@ -3,7 +3,7 @@
  * Plugin Name: Momentum Monthly для российских акций
  * Plugin URI: https://github.com/momentum-screener
  * Description: Месячный скринер моментума для российского рынка акций с бэктестингом и рекомендациями
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Momentum Screener Team
  * Author URI: https://github.com/momentum-screener
  * License: GPL v2 or later
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('MOMENTUM_MONTH_VERSION', '1.0.0');
+define('MOMENTUM_MONTH_VERSION', '1.1.0');
 define('MOMENTUM_MONTH_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('MOMENTUM_MONTH_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -276,10 +276,13 @@ class Momentum_Month {
 
             <h3><?php esc_html_e('Параметры шорткода:', 'momentum-month'); ?></h3>
             <ul>
-                <li><code>lookback="6"</code> - <?php esc_html_e('Период расчета momentum (1-24 мес)', 'momentum-month'); ?></li>
-                <li><code>holding="1"</code> - <?php esc_html_e('Период удержания (1-6 мес)', 'momentum-month'); ?></li>
-                <li><code>topn="10"</code> - <?php esc_html_e('Количество акций в портфеле (5-30)', 'momentum-month'); ?></li>
+                <li><code>lookback="6"</code> — <?php esc_html_e('Период расчета momentum (1-24 мес)', 'momentum-month'); ?></li>
+                <li><code>holding="1"</code> — <?php esc_html_e('Период удержания (1-6 мес)', 'momentum-month'); ?></li>
+                <li><code>topn="10"</code> — <?php esc_html_e('Количество акций в портфеле (5-30)', 'momentum-month'); ?></li>
+                <li><code>tickers="SBER,GAZP,LKOH"</code> — <?php esc_html_e('Ограничить расчёт только указанными тикерами (через запятую). Если не указан — используются все тикеры из файла.', 'momentum-month'); ?></li>
             </ul>
+            <p><?php esc_html_e('Атрибут tickers позволяет размещать несколько скринеров на разных страницах с разными наборами акций:', 'momentum-month'); ?></p>
+            <code>[momentum_monthly tickers="SBER,GAZP,LKOH,YNDX,GMKN"]</code>
 
             <h3><?php esc_html_e('Блокировка фильтров:', 'momentum-month'); ?></h3>
             <p><?php esc_html_e('Добавьте атрибуты lock_*="1", чтобы запретить пользователю изменять соответствующий параметр. Пример:', 'momentum-month'); ?></p>
