@@ -381,6 +381,7 @@ self.onmessage = function(e) {
     if (type === 'init') {
         var pricesRaw    = e.data.pricesRaw;
         var dividendsRaw = e.data.dividendsRaw || null;
+        var tickerFilter = e.data.tickerFilter  || null;
 
         try {
             if (!pricesRaw || pricesRaw.length === 0) {
@@ -388,6 +389,15 @@ self.onmessage = function(e) {
             }
 
             tickersCache = Object.keys(pricesRaw[0]).filter(function(k) { return k !== 'Time'; });
+
+            if (tickerFilter && tickerFilter.length > 0) {
+                var filterSet = {};
+                for (var fi = 0; fi < tickerFilter.length; fi++) {
+                    filterSet[tickerFilter[fi]] = true;
+                }
+                tickersCache = tickersCache.filter(function(t) { return !!filterSet[t]; });
+            }
+
             n       = pricesRaw.length;
             m       = tickersCache.length;
             hasDivs = !!(dividendsRaw && dividendsRaw.length > 0);

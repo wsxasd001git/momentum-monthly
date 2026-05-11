@@ -6,8 +6,9 @@
 (function($) {
     'use strict';
 
-    let tickersCache = null;
-    let charts       = {};
+    let tickersCache  = null;
+    let tickerFilter  = null;
+    let charts        = {};
     let recalcTimeout = null;
     let worker        = null;
     let workerReady   = false;
@@ -45,6 +46,11 @@
         locks.vol       = $app.data('lock-vol')       === 1 || $app.data('lock-vol')       === '1';
         locks.riskadj   = $app.data('lock-riskadj')   === 1 || $app.data('lock-riskadj')   === '1';
         locks.return    = $app.data('lock-return')    === 1 || $app.data('lock-return')    === '1';
+
+        var rawTickers = $app.data('tickers');
+        if (rawTickers && String(rawTickers).trim() !== '') {
+            tickerFilter = String(rawTickers).split(',').map(function(t) { return t.trim().toUpperCase(); }).filter(Boolean);
+        }
 
         $('#ms-lookback').val(settings.lookbackPeriod);
         $('#ms-holding').val(settings.holdingPeriod);
@@ -150,7 +156,8 @@
         worker.postMessage({
             type:         'init',
             pricesRaw:    pricesRaw,
-            dividendsRaw: dividendsRaw
+            dividendsRaw: dividendsRaw,
+            tickerFilter: tickerFilter
         });
     }
 

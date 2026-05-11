@@ -412,6 +412,7 @@ class Momentum_Month {
             'lock_vol' => '0',
             'lock_riskadj' => '0',
             'lock_return' => '0',
+            'tickers' => '',
         ), $atts);
 
         ob_start();
